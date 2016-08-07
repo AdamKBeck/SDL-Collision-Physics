@@ -4,12 +4,18 @@
 #include "SDL_image.h"
 #include <stdlib.h>
 
+const double GRAVITY = -9.81;
+const int MOVE = 10; // Amount of pixels moved for one keboard press
+const int WINDOW_WIDTH = 900;
+const int WINDOW_HEIGHT = 600;
+const int MAN_WIDTH = 50;
+const int MAN_HEIGHT = 50;
+
 typedef struct {
 	int x, y;
 	short life;
 	char *name;
 } Man;
-
 
 typedef struct{
 	int x, y;
@@ -29,9 +35,9 @@ typedef struct {
 
 void loadGame(GameState *game){
 
-	/* Initialize man struct from gameState */
-	game->man.x = 320-40;
-	game->man.y = 240-40;
+	/* Initialize man struct from gameState, put man on a random coordinate on the window */
+	game->man.x = (rand() % (WINDOW_WIDTH - MAN_WIDTH));
+	game->man.y = (rand() % (WINDOW_HEIGHT - MAN_HEIGHT));
 
 	SDL_Surface *starSurface = NULL;
 
@@ -50,6 +56,22 @@ void loadGame(GameState *game){
 	for (int i = 0; i < 100; i++){
 		game->stars[i].x = rand() % 640;
 		game->stars[i].y = rand() % 480;
+	}
+}
+
+void boundsCheck(GameState *game){
+	/* Keeps man inside screen window */
+	if (game->man.x < 0){
+		game->man.x = 0;
+	}
+	if (game->man.x > (WINDOW_WIDTH - MAN_WIDTH)){
+		game->man.x = WINDOW_WIDTH- MAN_WIDTH;
+	}
+	if (game->man.y < 0){
+		game->man.y = 0;
+	}
+	if (game->man.y > (WINDOW_HEIGHT - MAN_HEIGHT)){
+		game->man.y = WINDOW_HEIGHT - MAN_HEIGHT;
 	}
 }
 
@@ -91,20 +113,23 @@ int processEvents(SDL_Window *window, GameState *game) {
 	// player movement
 	const Uint8 *state = SDL_GetKeyboardState(NULL);
 	if (state[SDL_SCANCODE_RETURN]){
-		printf("<RETURN> is pressed.\n");
+		printf("<RETURN> is pressed.\n"); // Testing purposes only
 	}
 	if (state[SDL_SCANCODE_LEFT]){
-		game->man.x -= 10;
+		game->man.x -= MOVE;
 	}
 	if (state[SDL_SCANCODE_RIGHT]){
-		game->man.x += 10;
+		game->man.x += MOVE;
 	}
 	if (state[SDL_SCANCODE_UP]){
-		game->man.y -= 10;
+		game->man.y -= MOVE;
 	}
 	if (state[SDL_SCANCODE_DOWN]){
-		game->man.y += 10;
+		game->man.y += MOVE;
 	}
+
+	// Before display is rendered, correct out of bounds movement
+	boundsCheck(game);
 
 	return done;
 }
@@ -120,7 +145,7 @@ void doRender(SDL_Renderer *renderer, GameState *game) {
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255,255);
 
 	// Rectangle uses man x and y coordinates
-	SDL_Rect rect = {game->man.x, game->man.y, 200, 200};
+	SDL_Rect rect = {game->man.x, game->man.y, MAN_WIDTH, MAN_HEIGHT};
 	SDL_RenderFillRect(renderer, &rect);
 
 	// Draw star image, not used now, may use later
@@ -153,8 +178,8 @@ int main(int argc, char* argv[]) {
 	window = SDL_CreateWindow("Game Window",				// Window title
 	                          SDL_WINDOWPOS_UNDEFINED,		// x position
 	                          SDL_WINDOWPOS_UNDEFINED,		// y position
-	                          640,							// width
-	                          480,							// height
+	                          WINDOW_WIDTH,					// width
+	                          WINDOW_HEIGHT,				// height
 	                          0								// flags
 	                         );
 
