@@ -10,9 +10,11 @@ const int WINDOW_WIDTH = 900;
 const int WINDOW_HEIGHT = 600;
 const int MAN_WIDTH = 50;
 const int MAN_HEIGHT = 50;
+int grav_trigger = 0; // When 'T' is pressed, this is set to 1
 
 typedef struct {
 	int x, y;
+	float speed;
 	short life;
 	char *name;
 } Man;
@@ -38,6 +40,7 @@ void loadGame(GameState *game){
 	/* Initialize man struct from gameState, put man on a random coordinate on the window */
 	game->man.x = (rand() % (WINDOW_WIDTH - MAN_WIDTH));
 	game->man.y = (rand() % (WINDOW_HEIGHT - MAN_HEIGHT));
+	game->man.speed = 0;
 
 	SDL_Surface *starSurface = NULL;
 
@@ -75,6 +78,32 @@ void boundsCheck(GameState *game){
 	}
 }
 
+/* Applies gravity to the square */
+void applyGravity(GameState *game){
+	if (game->man.speed == 0){
+		game->man.speed = 1;
+	}
+
+	if (game->man.speed >= 0){
+		game->man.speed *= 1.1;
+	}
+	else{
+		game->man.speed *= .85;
+	}
+
+	// When speed approaches 0 while traveling upward, flip direciton
+	if (game->man.speed <= 0 && game->man.speed >= -1){
+		game->man.speed = 1;
+	}
+
+	game->man.y += (int)(game->man.speed);
+
+	// Flip direction when square hits edges
+	if (game->man.y >= WINDOW_HEIGHT - MAN_HEIGHT || game->man.y <= 0){
+		game->man.speed *= -1;
+	}
+}
+
 int processEvents(SDL_Window *window, GameState *game) {
 	SDL_Event event;
 
@@ -106,31 +135,40 @@ int processEvents(SDL_Window *window, GameState *game) {
 			done = 1;
 			break;
 		}
-
 	}
 
-
-	// player movement
+	// WASD and arrow key player movement
 	const Uint8 *state = SDL_GetKeyboardState(NULL);
 	if (state[SDL_SCANCODE_RETURN]){
 		printf("<RETURN> is pressed.\n"); // Testing purposes only
 	}
-	if (state[SDL_SCANCODE_LEFT]){
+	if (state[SDL_SCANCODE_LEFT] || state[SDL_SCANCODE_A]){
 		game->man.x -= MOVE;
 	}
-	if (state[SDL_SCANCODE_RIGHT]){
+	if (state[SDL_SCANCODE_RIGHT] || state[SDL_SCANCODE_D]){
 		game->man.x += MOVE;
 	}
-	if (state[SDL_SCANCODE_UP]){
+	if (state[SDL_SCANCODE_UP] || state[SDL_SCANCODE_W]){
 		game->man.y -= MOVE;
 	}
-	if (state[SDL_SCANCODE_DOWN]){
+	if (state[SDL_SCANCODE_DOWN] || state[SDL_SCANCODE_S]){
 		game->man.y += MOVE;
 	}
 
-	// Before display is rendered, correct out of bounds movement
-	boundsCheck(game);
+	/*	When 'T' is pressed apply gravity.
+	 *	Turn off gravity when released */
+	grav_trigger = 0;
+	if (state[SDL_SCANCODE_T]){
+		grav_trigger = 1;
+		applyGravity(game);
+	}
 
+	/* To start speed back at 0 when pressed again, set to 0 when 'T' is released */
+	if (!grav_trigger){
+		game->man.speed = 0;
+	}
+
+	boundsCheck(game); 	// Before display is rendered, correct out of bounds movement
 	return done;
 }
 
