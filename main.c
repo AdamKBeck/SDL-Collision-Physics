@@ -3,37 +3,79 @@
 #include "SDL.h"
 #include "SDL_image.h"
 #include <stdlib.h>
+#include "main.h"
 
-const double GRAVITY = -9.81;
-const int MOVE = 10; // Amount of pixels moved for one keboard press
-const int WINDOW_WIDTH = 900;
-const int WINDOW_HEIGHT = 600;
-const int MAN_WIDTH = 50;
-const int MAN_HEIGHT = 50;
-int grav_trigger = 0; // When 'T' is pressed, this is set to 1
+int main(int argc, char* argv[]) {
 
-typedef struct {
-	int x, y;
-	float speed;
-	short life;
-	char *name;
-} Man;
+	srand( (unsigned)time( NULL ) ); // Seed random numbers with current time
 
-typedef struct{
-	int x, y;
-} Star;
+	GameState gameState;
+	SDL_Window *window = NULL;		// Declare a window
+	SDL_Renderer *renderer = NULL;	// Declare a renderer
 
-typedef struct {
-	// Players
-	Man man;
+	SDL_Init(SDL_INIT_VIDEO);	// Initialize SDL2
 
-	// Stars
-	Star stars[100];
 
-	//Images
-	SDL_Texture *star;
-	SDL_Renderer *renderer;
-} GameState;
+	/* Create an application window with the following settings: */
+	window = SDL_CreateWindow("Game Window",				// Window title
+	                          SDL_WINDOWPOS_UNDEFINED,		// x position
+	                          SDL_WINDOWPOS_UNDEFINED,		// y position
+	                          WINDOW_WIDTH,					// width
+	                          WINDOW_HEIGHT,				// height
+	                          0								// flags
+	                         );
+
+	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC); // Vsync flag to refresh animations with monitor refresh rate
+	gameState.renderer = renderer;
+
+	loadGame(&gameState);
+
+	/* The window is open: enter program loop (See SDL_PollEvent) */
+	int done = 0;
+
+	while (!done) { // event loop
+		done = processEvents(window, &gameState); // check for events
+		doRender(renderer, &gameState); // render display
+	}
+
+	SDL_DestroyTexture(gameState.star); // shutdown game and unload all memory
+
+	/* Close and destroy window */
+	SDL_DestroyWindow(window);
+	SDL_DestroyRenderer(renderer);
+
+	/* Clean up*/
+	SDL_Quit();
+	return 0;
+}
+
+void doRender(SDL_Renderer *renderer, GameState *game) {
+	// set drawing color to blue
+	SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
+
+	// clear the screen to blue
+	SDL_RenderClear(renderer);
+
+	// set drawing color to white
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255,255);
+
+	// Rectangle uses man x and y coordinates
+	SDL_Rect rect = {game->man.x, game->man.y, MAN_WIDTH, MAN_HEIGHT};
+	SDL_RenderFillRect(renderer, &rect);
+
+	// Draw star image, not used now, may use later
+//	for (int i = 0; i < 100; i++){
+//		SDL_Rect starRect= {game->stars[i].x, game->stars[i].y, 64, 64};
+//		SDL_RenderCopy(renderer, game->star, NULL, &starRect);
+//	}
+
+
+	// present to the screen what we've drawn
+	SDL_RenderPresent(renderer);
+
+	// don't burn up CPU, pause 100ms
+	//SDL_Delay(10); // taken out because of vsync flag
+}
 
 void loadGame(GameState *game){
 
@@ -44,7 +86,7 @@ void loadGame(GameState *game){
 
 	SDL_Surface *starSurface = NULL;
 
-	// Load images and create rendering textures from them
+	/* Load images and create rendering textures from them */
 	starSurface = IMG_Load("star.png");
 
 	if (starSurface == NULL){
@@ -59,48 +101,6 @@ void loadGame(GameState *game){
 	for (int i = 0; i < 100; i++){
 		game->stars[i].x = rand() % 640;
 		game->stars[i].y = rand() % 480;
-	}
-}
-
-void boundsCheck(GameState *game){
-	/* Keeps man inside screen window */
-	if (game->man.x < 0){
-		game->man.x = 0;
-	}
-	if (game->man.x > (WINDOW_WIDTH - MAN_WIDTH)){
-		game->man.x = WINDOW_WIDTH- MAN_WIDTH;
-	}
-	if (game->man.y < 0){
-		game->man.y = 0;
-	}
-	if (game->man.y > (WINDOW_HEIGHT - MAN_HEIGHT)){
-		game->man.y = WINDOW_HEIGHT - MAN_HEIGHT;
-	}
-}
-
-/* Applies gravity to the square */
-void applyGravity(GameState *game){
-	if (game->man.speed == 0){
-		game->man.speed = 1;
-	}
-
-	if (game->man.speed >= 0){
-		game->man.speed *= 1.1;
-	}
-	else{
-		game->man.speed *= .85;
-	}
-
-	// When speed approaches 0 while traveling upward, flip direciton
-	if (game->man.speed <= 0 && game->man.speed >= -1){
-		game->man.speed = 1;
-	}
-
-	game->man.y += (int)(game->man.speed);
-
-	// Flip direction when square hits edges
-	if (game->man.y >= WINDOW_HEIGHT - MAN_HEIGHT || game->man.y <= 0){
-		game->man.speed *= -1;
 	}
 }
 
@@ -157,9 +157,9 @@ int processEvents(SDL_Window *window, GameState *game) {
 
 	/*	When 'T' is pressed apply gravity.
 	 *	Turn off gravity when released */
-	grav_trigger = 0;
+	grav_trigger = false;
 	if (state[SDL_SCANCODE_T]){
-		grav_trigger = 1;
+		grav_trigger = true;
 		applyGravity(game);
 	}
 
@@ -172,81 +172,44 @@ int processEvents(SDL_Window *window, GameState *game) {
 	return done;
 }
 
-void doRender(SDL_Renderer *renderer, GameState *game) {
-	// set drawing color to blue
-	SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
-
-	// clear the screen to blue
-	SDL_RenderClear(renderer);
-
-	// set drawing color to white
-	SDL_SetRenderDrawColor(renderer, 255, 255, 255,255);
-
-	// Rectangle uses man x and y coordinates
-	SDL_Rect rect = {game->man.x, game->man.y, MAN_WIDTH, MAN_HEIGHT};
-	SDL_RenderFillRect(renderer, &rect);
-
-	// Draw star image, not used now, may use later
-//	for (int i = 0; i < 100; i++){
-//		SDL_Rect starRect= {game->stars[i].x, game->stars[i].y, 64, 64};
-//		SDL_RenderCopy(renderer, game->star, NULL, &starRect);
-//	}
-
-
-	// present to the screen what we've drawn
-	SDL_RenderPresent(renderer);
-
-	// don't burn up CPU, pause 100ms
-	//SDL_Delay(10); // taken out because of vsync flag
+void boundsCheck(GameState *game){
+	/* Keeps man inside screen window */
+	if (game->man.x < 0){
+		game->man.x = 0;
+	}
+	if (game->man.x > (WINDOW_WIDTH - MAN_WIDTH)){
+		game->man.x = WINDOW_WIDTH- MAN_WIDTH;
+	}
+	if (game->man.y < 0){
+		game->man.y = 0;
+	}
+	if (game->man.y > (WINDOW_HEIGHT - MAN_HEIGHT)){
+		game->man.y = WINDOW_HEIGHT - MAN_HEIGHT;
+	}
 }
 
-int main(int argc, char* argv[]) {
-
-	srand( (unsigned)time( NULL ) ); // Seed random numbers with current time
-
-
-	GameState gameState;
-	SDL_Window *window = NULL;		// Declare a window
-	SDL_Renderer *renderer = NULL;	// Declare a renderer
-
-	SDL_Init(SDL_INIT_VIDEO);	// Initialize SDL2
-
-
-	/* Create an application window with the following settings: */
-	window = SDL_CreateWindow("Game Window",				// Window title
-	                          SDL_WINDOWPOS_UNDEFINED,		// x position
-	                          SDL_WINDOWPOS_UNDEFINED,		// y position
-	                          WINDOW_WIDTH,					// width
-	                          WINDOW_HEIGHT,				// height
-	                          0								// flags
-	                         );
-
-	// Vsync flag to refresh animations with monitor refresh rate
-	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-	gameState.renderer = renderer;
-
-	loadGame(&gameState);
-
-	/* The window is open: enter program loop (See SDL_PollEvent) */
-	int done = 0;
-
-	// Event loop
-	while (!done) {
-		// Check for events
-		done = processEvents(window, &gameState);
-
-		// render display
-		doRender(renderer, &gameState);
+/* Applies gravity to the square (TODO: apply to all objects)*/
+void applyGravity(GameState *game){
+	if (game->man.speed == 0){
+		game->man.speed = 1;
 	}
 
-	// Shutdown game and unload all memory
-	SDL_DestroyTexture(gameState.star);
+	if (game->man.speed >= 0){
+		game->man.speed *= 1.1;
+	}
+	else{
+		game->man.speed *= .85;
+	}
 
-	/* Close and destroy window */
-	SDL_DestroyWindow(window);
-	SDL_DestroyRenderer(renderer);
+	// When speed approaches 0 while traveling upward, flip direciton
+	if (game->man.speed <= 0 && game->man.speed >= -1){
+		game->man.speed = 1;
+	}
 
-	/* Clean up*/
-	SDL_Quit();
-	return 0;
+	game->man.y += (int)(game->man.speed);
+
+	// Flip direction when square hits edges
+	if (game->man.y >= WINDOW_HEIGHT - MAN_HEIGHT || game->man.y <= 0){
+		game->man.speed *= -1;
+	}
 }
