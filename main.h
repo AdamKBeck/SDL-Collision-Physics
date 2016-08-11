@@ -4,7 +4,7 @@
 #include "stdbool.h"
 
 /* Make extern later if used between multiple .c files */
-const double GRAVITY = -9.81;
+const double GRAVITY = 9.81; // positive is downward in GUI
 const int MOVE = 10; // Amount of pixels moved for one keboard press
 const int WINDOW_WIDTH = 900;
 const int WINDOW_HEIGHT = 600;

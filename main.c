@@ -193,26 +193,13 @@ void boundsCheck(GameState *game){
 
 /* Applies gravity to the square (TODO: apply to all objects)*/
 void applyGravity(GameState *game){
-	if (game->man.speed == 0){
-		game->man.speed = 1;
-	}
 
-	if (game->man.speed >= 0){
-		game->man.speed *= 1.1;
-	}
-	else{
-		game->man.speed *= .85;
-	}
-
-	// When speed approaches 0 while traveling upward, flip direciton
-	if (game->man.speed <= 0 && game->man.speed >= -1){
-		game->man.speed = 1;
-	}
-
+	incVel(&(game->man.speed)); // Increments velocity of square
 	game->man.y += (int)(game->man.speed);
 
-	// Flip direction when square hits edges
+	/* Flip direction when square hits edges */
 	if (game->man.y >= WINDOW_HEIGHT - MAN_HEIGHT || game->man.y <= 0){
 		game->man.speed = getVelocity(game->man.speed, 1, 0, 0);
 	}
+
 }
