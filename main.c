@@ -1,10 +1,13 @@
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "SDL.h"
 #include "SDL_image.h"
-#include <stdlib.h>
 #include "main.h"
+#include "Momentum.h"
 
+/* This project is a basic GUI for collision detection and physics
+ * Using objects created with the SDL API */
 int main(int argc, char* argv[]) {
 
 	srand( (unsigned)time( NULL ) ); // Seed random numbers with current time
@@ -210,6 +213,6 @@ void applyGravity(GameState *game){
 
 	// Flip direction when square hits edges
 	if (game->man.y >= WINDOW_HEIGHT - MAN_HEIGHT || game->man.y <= 0){
-		game->man.speed *= -1;
+		game->man.speed = getVelocity(game->man.speed, 1, 0, 0);
 	}
 }
